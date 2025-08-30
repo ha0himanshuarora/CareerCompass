@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -69,8 +70,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       case 'student':
         return studentNavItems;
       case 'recruiter':
-        // For now, only show dashboard, as per request
-        return [recruiterNavItems[0]];
+        return recruiterNavItems;
       case 'tpo':
          // For now, only show dashboard, as per request
         return [tpoNavItems[0]];
