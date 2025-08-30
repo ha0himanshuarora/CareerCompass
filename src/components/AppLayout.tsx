@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -15,7 +14,9 @@ import {
   Settings,
   GanttChartSquare,
   Building,
-  Handshake
+  Handshake,
+  FileQuestion,
+  Trophy
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -34,6 +35,7 @@ const studentNavItems = [
   { href: "/find-jobs", icon: Briefcase, label: "Find Jobs" },
   { href: "/applications", icon: GanttChartSquare, label: "Applications" },
   { href: "/resumes", icon: FileText, label: "Resumes" },
+  { href: "/student-tests", icon: FileQuestion, label: "Tests" },
   { href: "/timeline", icon: GanttChartSquare, label: "Timeline" },
   { href: "/skills-extractor", icon: Lightbulb, label: "Skills Extractor" },
 ];
@@ -42,6 +44,7 @@ const recruiterNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/jobs", icon: Briefcase, label: "Job Postings" },
   { href: "/candidates", icon: Users, label: "Candidates" },
+  { href: "/tests", icon: FileQuestion, label: "Manage Tests" },
   { href: "/collaborations", icon: Handshake, label: "Collaborations" },
 ];
 
@@ -50,6 +53,7 @@ const tpoNavItems = [
   { href: "/tpo/students", icon: Users, label: "Students" },
   { href: "/tpo/companies", icon: Building, label: "Companies" },
   { href: "/tpo/jobs", icon: Briefcase, label: "Job Postings" },
+  { href: "/tests", icon: FileQuestion, label: "Manage Tests" },
   { href: "/tpo/collaborations", icon: Handshake, label: "Collaborations" },
 ];
 

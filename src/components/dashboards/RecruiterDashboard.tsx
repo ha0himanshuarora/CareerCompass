@@ -58,23 +58,23 @@ export function RecruiterDashboard() {
     setSummaryCards(initialSummary);
     
     // --- Jobs Listener ---
-    const jobsQuery = query(collection(db, "jobs"), where("recruiterId", "==", recruiterId));
+    const jobsQuery = query(collection(db, "jobs"), where("companyId", "==", recruiterId));
     const unsubscribeJobs = onSnapshot(jobsQuery, (snapshot) => {
       const jobsData = snapshot.docs.map(docSnapshot => {
         const data = docSnapshot.data();
         const job: Job = { id: docSnapshot.id, ...data } as Job;
         
-        const deadlineDate = new Date(job.deadline);
+        const deadlineDate = new Date(job.jobDetails.applicationDeadline);
         const today = new Date();
         today.setHours(0,0,0,0);
-        if (job.status === 'open' && deadlineDate < today) {
-          updateDoc(docSnapshot.ref, { status: 'closed' });
-          job.status = 'closed';
+        if (job.metadata.status === 'Open' && deadlineDate < today) {
+          updateDoc(docSnapshot.ref, { 'metadata.status': 'Closed' });
+          job.metadata.status = 'Closed';
         }
         return job;
       });
       
-      const activeJobsCount = jobsData.filter(j => j.status === 'open').length;
+      const activeJobsCount = jobsData.filter(j => j.metadata.status === 'Open').length;
       setRecentJobs(jobsData.slice(0, 4));
       setSummaryCards(prev => prev.map(c => c.title === "Active Jobs" ? { ...c, value: activeJobsCount } : c));
       setLoading(false); // Set loading to false after first job fetch
@@ -128,10 +128,10 @@ export function RecruiterDashboard() {
     setSheetOpen(false);
   }
 
-  const handleUpdateStatus = async (jobId: string, status: 'open' | 'closed') => {
+  const handleUpdateStatus = async (jobId: string, status: 'Open' | 'Closed') => {
     try {
       const jobRef = doc(db, "jobs", jobId);
-      await updateDoc(jobRef, { status });
+      await updateDoc(jobRef, { 'metadata.status': status });
       toast({title: "Success", description: `Job has been ${status}.`});
     } catch (error) {
        toast({variant: "destructive", title: "Error", description: "Could not update job status."})
@@ -219,11 +219,11 @@ export function RecruiterDashboard() {
                           <TableBody>
                               {recentJobs.length > 0 ? recentJobs.map((job) => (
                                   <TableRow key={job.id}>
-                                      <TableCell className="font-medium">{job.jobTitle}</TableCell>
-                                      <TableCell className="text-center">{job.applicants?.length ?? 0}</TableCell>
+                                      <TableCell className="font-medium">{job.jobDetails.title}</TableCell>
+                                      <TableCell className="text-center">{job.metadata.applicantCount ?? 0}</TableCell>
                                       <TableCell className="text-center">
-                                        <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
-                                          {job.status === 'open' ? 'Open' : 'Closed'}
+                                        <Badge variant={job.metadata.status === 'Open' ? 'default' : 'secondary'}>
+                                          {job.metadata.status}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="text-right">
@@ -238,8 +238,8 @@ export function RecruiterDashboard() {
                                                   <DropdownMenuItem onClick={() => handleOpenSheet(job)}>
                                                       <Edit className="mr-2 h-4 w-4" /> Edit
                                                   </DropdownMenuItem>
-                                                   {job.status === 'open' && (
-                                                      <DropdownMenuItem onClick={() => handleUpdateStatus(job.id, 'closed')}>
+                                                   {job.metadata.status === 'Open' && (
+                                                      <DropdownMenuItem onClick={() => handleUpdateStatus(job.id, 'Closed')}>
                                                         <XCircle className="mr-2 h-4 w-4" /> Close Job
                                                       </DropdownMenuItem>
                                                     )}

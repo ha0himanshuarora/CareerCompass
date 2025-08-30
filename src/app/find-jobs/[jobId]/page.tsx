@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { Job, Application, Resume } from "@/lib/types";
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
-import { Loader2, Briefcase, Building, Wallet, Calendar, Check, ArrowLeft, FileText } from "lucide-react";
+import { Job, Application, Resume, Recruiter } from "@/lib/types";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { Loader2, Briefcase, Building, Wallet, Calendar, Check, ArrowLeft, FileText, MapPin, Dot } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ export default function JobDetailsPage() {
     const jobId = params.jobId as string;
     
     const [job, setJob] = useState<Job | null>(null);
+    const [recruiter, setRecruiter] = useState<Recruiter | null>(null);
     const [applications, setApplications] = useState<Application[]>([]);
     const [resumes, setResumes] = useState<Resume[]>([]);
     const [selectedResume, setSelectedResume] = useState<string>("");
@@ -41,7 +42,23 @@ export default function JobDetailsPage() {
                 const jobRef = doc(db, "jobs", jobId);
                 const jobSnap = await getDoc(jobRef);
                 if (jobSnap.exists()) {
-                    setJob({ id: jobSnap.id, ...jobSnap.data() } as Job);
+                    const jobData = jobSnap.data();
+                    const jobWithDate = { 
+                        id: jobSnap.id, 
+                        ...jobData,
+                        jobDetails: {
+                            ...jobData.jobDetails,
+                            applicationDeadline: (jobData.jobDetails.applicationDeadline as Timestamp)?.toDate(),
+                        }
+                    } as Job;
+
+                    setJob(jobWithDate);
+                    // Fetch recruiter details
+                    const recruiterRef = doc(db, "users", jobWithDate.companyId);
+                    const recruiterSnap = await getDoc(recruiterRef);
+                    if (recruiterSnap.exists()) {
+                        setRecruiter(recruiterSnap.data() as Recruiter);
+                    }
                 } else {
                      toast({ variant: "destructive", title: "Error", description: "Job not found." });
                      router.push("/find-jobs");
@@ -81,9 +98,11 @@ export default function JobDetailsPage() {
     const hasApplied = useMemo(() => {
         return applications.some(app => app.jobId === jobId);
     }, [applications, jobId]);
+    
+    const isInternship = useMemo(() => job?.jobDetails.jobType === "Internship", [job]);
 
     const handleApply = async () => {
-        if (!userProfile || !job) {
+        if (!userProfile || !job || !recruiter) {
             toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply." });
             return;
         }
@@ -96,10 +115,10 @@ export default function JobDetailsPage() {
             // Add to applications collection
             await addDoc(collection(db, "applications"), {
                 jobId: job.id,
-                jobTitle: job.jobTitle,
-                companyName: job.companyName,
+                jobTitle: job.jobDetails.title,
+                companyName: recruiter.companyName,
                 studentId: userProfile.uid,
-                recruiterId: job.recruiterId,
+                recruiterId: job.companyId,
                 resumeId: selectedResume,
                 status: 'applied',
                 appliedDate: serverTimestamp(),
@@ -108,10 +127,10 @@ export default function JobDetailsPage() {
             // Add student's UID to the job's applicants array
             const jobRef = doc(db, "jobs", job.id);
             await updateDoc(jobRef, {
-                applicants: arrayUnion(userProfile.uid)
+                'metadata.applicantCount': job.metadata.applicantCount + 1
             });
 
-            toast({ title: "Success!", description: `You have successfully applied for ${job.jobTitle}.` });
+            toast({ title: "Success!", description: `You have successfully applied for ${job.jobDetails.title}.` });
         } catch (error) {
             console.error("Error applying for job: ", error);
             toast({ variant: "destructive", title: "Error", description: "Could not submit your application." });
@@ -131,7 +150,7 @@ export default function JobDetailsPage() {
         );
     }
     
-    if (!job) {
+    if (!job || !recruiter) {
         return (
             <AppLayout>
                  <div className="text-center">
@@ -152,47 +171,97 @@ export default function JobDetailsPage() {
                     <CardHeader>
                         <div className="flex justify-between items-start">
                             <div>
-                                <CardTitle className="text-3xl font-headline">{job.jobTitle}</CardTitle>
+                                <CardTitle className="text-3xl font-headline">{job.jobDetails.title}</CardTitle>
                                 <CardDescription className="flex items-center gap-2 pt-2 text-lg">
-                                    <Building className="h-5 w-5" /> {job.companyName}
+                                    <Building className="h-5 w-5" /> {recruiter.companyName}
                                 </CardDescription>
                             </div>
-                            <Badge variant={job.jobType === "Job" ? "default" : "secondary"} className="text-base">{job.jobType}</Badge>
+                            <Badge variant={job.jobDetails.jobType === "Full-time" ? "default" : "secondary"} className="text-base">{job.jobDetails.jobType}</Badge>
+                        </div>
+                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground pt-4">
+                            <div className="flex items-center gap-1.5">
+                                <MapPin className="h-4 w-4" />
+                                {job.jobDetails.location.type} {job.jobDetails.location.type !== "Remote" && `(${job.jobDetails.location.address})`}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Briefcase className="h-4 w-4" />
+                                {job.jobDetails.domain}
+                            </div>
+                             <div className="flex items-center gap-1.5">
+                                <Calendar className="h-4 w-4" />
+                                Apply by {job.jobDetails.applicationDeadline ? format(job.jobDetails.applicationDeadline, "PPP") : 'N/A'}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                           <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                                <Wallet className="h-6 w-6 text-primary" />
-                                <div>
-                                    <p className="text-muted-foreground">Salary / Stipend</p>
-                                    <p className="font-semibold text-lg">${job.salary.toLocaleString()} / year</p>
-                                </div>
-                           </div>
-                            <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                                <Calendar className="h-6 w-6 text-primary" />
-                                <div>
-                                    <p className="text-muted-foreground">Apply By</p>
-                                    <p className="font-semibold text-lg">{format(new Date(job.deadline), "PPP")}</p>
-                                </div>
-                           </div>
-                       </div>
                        
                        <div>
                            <h3 className="text-xl font-semibold font-headline mb-3">Job Description</h3>
-                           <p className="text-muted-foreground whitespace-pre-wrap">{job.description}</p>
+                           <p className="text-muted-foreground whitespace-pre-wrap">{job.jobDetails.description}</p>
                        </div>
                        
-                        <div>
-                           <h3 className="text-xl font-semibold font-headline mb-3">Eligibility Criteria</h3>
-                           <p className="text-muted-foreground whitespace-pre-wrap">{job.eligibility}</p>
-                       </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <div>
+                               <h3 className="text-xl font-semibold font-headline mb-3">Salary & Benefits</h3>
+                               <div className="space-y-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <Wallet className="h-4 w-4 text-primary" />
+                                        <span className="font-semibold">{isInternship ? 'Stipend:' : 'CTC:'}</span>
+                                        <span>{isInternship ? job.salaryAndBenefits.stipend : job.salaryAndBenefits.ctc}</span>
+                                    </div>
+                                    {isInternship && job.salaryAndBenefits.ppo && (
+                                        <div className="flex items-center gap-2">
+                                            <Check className="h-4 w-4 text-green-500" />
+                                            <span>PPO Available (CTC: {job.salaryAndBenefits.ppoCtc})</span>
+                                        </div>
+                                    )}
+                                    {job.salaryAndBenefits.perks && job.salaryAndBenefits.perks.length > 0 && (
+                                        <div>
+                                            <h4 className="font-semibold mt-3">Perks:</h4>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {job.salaryAndBenefits.perks.map(perk => <Badge key={perk} variant="secondary">{perk}</Badge>)}
+                                            </div>
+                                        </div>
+                                    )}
+                               </div>
+                           </div>
+
+                           <div>
+                               <h3 className="text-xl font-semibold font-headline mb-3">Required Skills</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {job.eligibilityCriteria.skillRequirements.map(skill => <Badge key={skill} variant="outline" className="text-md">{skill}</Badge>)}
+                                </div>
+                           </div>
+                        </div>
+
 
                         <div>
-                           <h3 className="text-xl font-semibold font-headline mb-3">Required Skills</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {job.skills.map(skill => <Badge key={skill} variant="outline" className="text-md">{skill}</Badge>)}
-                            </div>
+                           <h3 className="text-xl font-semibold font-headline mb-3">Eligibility Criteria</h3>
+                           <ul className="list-disc pl-5 text-muted-foreground space-y-2 text-sm">
+                                {Object.entries(job.eligibilityCriteria).map(([key, value]) => {
+                                    if (!value || Array.isArray(value) && value.length === 0) return null;
+                                    
+                                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                    let displayValue;
+                                    
+                                    if (typeof value === 'boolean') {
+                                        displayValue = value ? 'Yes' : 'No';
+                                    } else if (Array.isArray(value)) {
+                                        displayValue = value.join(', ');
+                                    } else {
+                                        displayValue = String(value);
+                                    }
+
+                                    // Skip uninteresting fields
+                                    if (key === 'skillRequirements') return null;
+
+                                    return (
+                                        <li key={key}>
+                                            <span className="font-semibold text-foreground">{label}:</span> {displayValue}
+                                        </li>
+                                    );
+                                })}
+                           </ul>
                        </div>
                        
                         <div className="pt-6 border-t">
@@ -236,5 +305,3 @@ export default function JobDetailsPage() {
         </AppLayout>
     );
 }
-
-    

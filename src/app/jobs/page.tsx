@@ -45,7 +45,7 @@ export default function JobsPage() {
     if (!userProfile) return;
 
     setLoading(true);
-    const jobsQuery = query(collection(db, "jobs"), where("recruiterId", "==", userProfile.uid));
+    const jobsQuery = query(collection(db, "jobs"), where("companyId", "==", userProfile.uid));
 
     const unsubscribe = onSnapshot(jobsQuery, (snapshot) => {
       const jobsData = snapshot.docs.map(doc => {
@@ -53,14 +53,16 @@ export default function JobsPage() {
         const job = {
             id: doc.id,
             ...data
-        } as Job
-        const deadlineDate = new Date(job.deadline);
+        } as Job;
+
+        // Auto-close logic can be refined based on new schema
+        const deadlineDate = new Date(job.jobDetails.applicationDeadline);
         const today = new Date();
         today.setHours(0,0,0,0);
         
-        if (job.status === 'open' && deadlineDate < today) {
-          updateDoc(doc.ref, { status: 'closed' });
-          job.status = 'closed';
+        if (job.metadata.status === 'Open' && deadlineDate < today) {
+          updateDoc(doc.ref, { 'metadata.status': 'Closed' });
+          job.metadata.status = 'Closed';
         }
         return job;
       });
@@ -85,10 +87,10 @@ export default function JobsPage() {
     setSheetOpen(false);
   }
 
-  const handleUpdateStatus = async (jobId: string, status: 'open' | 'closed') => {
+  const handleUpdateStatus = async (jobId: string, status: 'Open' | 'Closed') => {
     try {
       const jobRef = doc(db, "jobs", jobId);
-      await updateDoc(jobRef, { status });
+      await updateDoc(jobRef, { "metadata.status": status });
       toast({title: "Success", description: `Job has been ${status}.`});
     } catch (error) {
        toast({variant: "destructive", title: "Error", description: "Could not update job status."})
@@ -153,12 +155,12 @@ export default function JobsPage() {
             <TableBody>
                 {jobs.map((job) => (
                     <TableRow key={job.id}>
-                        <TableCell className="font-medium">{job.jobTitle}</TableCell>
-                        <TableCell>{job.jobType}</TableCell>
-                        <TableCell className="text-center">{job.applicants?.length ?? 0}</TableCell>
+                        <TableCell className="font-medium">{job.jobDetails.title}</TableCell>
+                        <TableCell>{job.jobDetails.jobType}</TableCell>
+                        <TableCell className="text-center">{job.metadata.applicantCount ?? 0}</TableCell>
                         <TableCell className="text-center">
-                            <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
-                              {job.status === 'open' ? 'Open' : 'Closed'}
+                            <Badge variant={job.metadata.status === 'Open' ? 'default' : 'secondary'}>
+                              {job.metadata.status}
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -173,8 +175,8 @@ export default function JobsPage() {
                                     <DropdownMenuItem onClick={() => handleOpenSheet(job)}>
                                         <Edit className="mr-2 h-4 w-4" /> Edit
                                     </DropdownMenuItem>
-                                    {job.status === 'open' && (
-                                       <DropdownMenuItem onClick={() => handleUpdateStatus(job.id, 'closed')}>
+                                    {job.metadata.status === 'Open' && (
+                                       <DropdownMenuItem onClick={() => handleUpdateStatus(job.id, 'Closed')}>
                                         <XCircle className="mr-2 h-4 w-4" /> Close Job
                                       </DropdownMenuItem>
                                     )}

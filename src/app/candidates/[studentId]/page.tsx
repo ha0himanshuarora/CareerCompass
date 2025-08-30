@@ -6,20 +6,31 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/firebase";
-import { Student } from "@/lib/types";
-import { doc, getDoc } from "firebase/firestore";
+import { Student, Resume, Application } from "@/lib/types";
+import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { ArrowLeft, Briefcase, Calendar, GraduationCap, Loader2, Mail, School, FileText } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { ResumePreview } from "@/components/ResumePreview";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 export default function CandidateProfilePage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const studentId = params.studentId as string;
+    const applicationId = searchParams.get('applicationId');
 
     const [student, setStudent] = useState<Student | null>(null);
+    const [resumes, setResumes] = useState<Resume[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingResumes, setLoadingResumes] = useState(true);
 
     useEffect(() => {
         if (!studentId) return;
@@ -31,7 +42,6 @@ export default function CandidateProfilePage() {
                 if (studentDoc.exists()) {
                     setStudent(studentDoc.data() as Student);
                 } else {
-                    // Handle case where student not found
                     console.error("No such student!");
                 }
             } catch (error) {
@@ -40,9 +50,56 @@ export default function CandidateProfilePage() {
                 setLoading(false);
             }
         };
-
+        
         fetchStudent();
+
     }, [studentId]);
+
+    useEffect(() => {
+        if (!studentId) return;
+        
+        setLoadingResumes(true);
+
+        const fetchResumes = async () => {
+            let unsubscribeResumes;
+            try {
+                if (applicationId) {
+                    // Fetch the specific resume used for the application
+                    const appDoc = await getDoc(doc(db, "applications", applicationId));
+                    if (appDoc.exists()) {
+                        const appData = appDoc.data() as Application;
+                        const resumeDoc = await getDoc(doc(db, "resumes", appData.resumeId));
+                        if(resumeDoc.exists()) {
+                            setResumes([{ id: resumeDoc.id, ...resumeDoc.data() } as Resume]);
+                        }
+                    }
+                } else {
+                    // Fetch all resumes for the student
+                    const resumesQuery = query(collection(db, "resumes"), where("studentId", "==", studentId));
+                    unsubscribeResumes = onSnapshot(resumesQuery, (snapshot) => {
+                        const resumeData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Resume);
+                        setResumes(resumeData);
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching resumes:", error);
+            } finally {
+                setLoadingResumes(false);
+            }
+            return unsubscribeResumes;
+        }
+
+        const unsubscribePromise = fetchResumes();
+
+        return () => {
+            unsubscribePromise.then(unsubscribe => {
+                if (unsubscribe) {
+                    unsubscribe();
+                }
+            });
+        }
+    }, [studentId, applicationId]);
+
 
     if (loading) {
         return (
@@ -105,16 +162,37 @@ export default function CandidateProfilePage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
-                                Resumes
+                                {applicationId ? "Submitted Resume" : "Resumes"}
                             </CardTitle>
                             <CardDescription>
-                                Candidate's uploaded resumes will appear here.
+                                {applicationId ? "This is the resume the candidate submitted for the job." : "Review the candidate's submitted resumes."}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <div className="border-2 border-dashed rounded-lg p-12 text-center">
-                                <p className="text-muted-foreground">Resume management not implemented yet.</p>
-                            </div>
+                             {loadingResumes ? (
+                                <div className="flex items-center justify-center p-12">
+                                    <Loader2 className="h-8 w-8 animate-spin" />
+                                </div>
+                             ) : resumes.length > 0 ? (
+                                <Accordion type="single" collapsible className="w-full" defaultValue={applicationId ? resumes[0].id : undefined}>
+                                    {resumes.map(resume => (
+                                        <AccordionItem key={resume.id} value={resume.id}>
+                                            <AccordionTrigger className="text-lg font-semibold">{resume.title}</AccordionTrigger>
+                                            <AccordionContent>
+                                                <div className="bg-muted p-4 sm:p-8 rounded-lg mt-4">
+                                                    <div className="mx-auto w-full max-w-[210mm] shadow-lg">
+                                                        <ResumePreview resume={resume} />
+                                                    </div>
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    ))}
+                                </Accordion>
+                             ) : (
+                                <div className="border-2 border-dashed rounded-lg p-12 text-center">
+                                    <p className="text-muted-foreground">This candidate has not created any resumes yet.</p>
+                                </div>
+                             )}
                         </CardContent>
                     </Card>
                 </div>
