@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { RoleSelector } from "@/components/RoleSelector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -99,6 +102,8 @@ export default function SignupPage() {
   };
   
   const renderFormFields = () => {
+    const years = Array.from({ length: 2034 - 1990 + 1 }, (_, i) => 1990 + i);
+
     switch(role) {
       case 'student':
         return (
@@ -109,7 +114,19 @@ export default function SignupPage() {
             <div className="grid gap-2"><Label htmlFor="confirmPassword">Confirm Password</Label><Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="instituteName">Institute Name</Label><Input id="instituteName" required value={instituteName} onChange={(e) => setInstituteName(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="branch">Branch</Label><Input id="branch" required value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
-            <div className="grid gap-2"><Label htmlFor="graduationYear">Graduation Year</Label><Input id="graduationYear" type="number" placeholder="2025" required value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)} /></div>
+            <div className="grid gap-2">
+                <Label htmlFor="graduationYear">Graduation Year</Label>
+                <Select onValueChange={setGraduationYear} value={graduationYear} required>
+                    <SelectTrigger id="graduationYear" className="w-[180px]">
+                        <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {years.map(year => (
+                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
           </div>
         )
       case 'recruiter':
