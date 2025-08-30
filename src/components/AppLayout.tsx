@@ -31,7 +31,8 @@ import { Compass } from "lucide-react";
 
 const studentNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/applications", icon: Briefcase, label: "Applications" },
+  { href: "/find-jobs", icon: Briefcase, label: "Find Jobs" },
+  { href: "/applications", icon: GanttChartSquare, label: "Applications" },
   { href: "/resumes", icon: FileText, label: "Resumes" },
   { href: "/timeline", icon: GanttChartSquare, label: "Timeline" },
   { href: "/skills-extractor", icon: Lightbulb, label: "Skills Extractor" },
@@ -41,7 +42,7 @@ const recruiterNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/jobs", icon: Briefcase, label: "Job Postings" },
   { href: "/candidates", icon: Users, label: "Candidates" },
-  { href: "/tpo", icon: Handshake, label: "Collaborate with TPOs" },
+  { href: "/collaborations", icon: Handshake, label: "Collaborations" },
 ];
 
 const tpoNavItems = [

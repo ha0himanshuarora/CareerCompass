@@ -38,7 +38,8 @@ export default function TPOCollaborationsPage() {
         setLoading(true);
         const collaborationsQuery = query(
             collection(db, "collaborations"), 
-            where("tpoId", "==", userProfile.uid)
+            where("tpoId", "==", userProfile.uid),
+            where("initiatedBy", "==", "recruiter")
         );
         
         const unsubscribe = onSnapshot(collaborationsQuery, (snapshot) => {

@@ -1,6 +1,7 @@
 
 
 
+
 export interface Job {
     id: string;
     jobTitle: string;
@@ -79,4 +80,5 @@ export interface Collaboration {
     instituteName: string;
     status: 'pending' | 'accepted' | 'rejected';
     requestedAt: any; // Firestore timestamp
+    initiatedBy: 'recruiter' | 'tpo';
 }

@@ -14,7 +14,7 @@ import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "../ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Job, Interview } from "@/lib/types";
+import type { Job, Interview, Application } from "@/lib/types";
 import { ViewApplicantsDialog } from "../ViewApplicantsDialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
 import { CreateJobForm } from "../CreateJobForm";
@@ -60,30 +60,24 @@ export function RecruiterDashboard() {
       where("interviewDate", "<", Timestamp.fromDate(tomorrow))
     );
 
-    const unsubscribeJobs = onSnapshot(jobsQuery, async (snapshot) => {
-      const jobsDataPromises = snapshot.docs.map(async docSnapshot => {
+    const unsubscribeJobs = onSnapshot(jobsQuery, (snapshot) => {
+      const jobsData = snapshot.docs.map(docSnapshot => {
         const data = docSnapshot.data();
         const job: Job = { 
             id: docSnapshot.id,
             ...data
         } as Job;
-
-        const applicantsQuery = query(collection(db, "applications"), where("jobId", "==", job.id));
-        const applicantsSnapshot = await getCountFromServer(applicantsQuery);
-        job.applicantsCount = applicantsSnapshot.data().count;
         
         const deadlineDate = new Date(job.deadline);
         const today = new Date();
         today.setHours(0,0,0,0);
         if (job.status === 'open' && deadlineDate < today) {
-          await updateDoc(docSnapshot.ref, { status: 'closed' });
+          updateDoc(docSnapshot.ref, { status: 'closed' });
           job.status = 'closed';
         }
 
         return job;
       });
-      
-      const jobsData = await Promise.all(jobsDataPromises);
       
       setRecentJobs(jobsData.slice(0, 4));
       
@@ -94,8 +88,10 @@ export function RecruiterDashboard() {
     });
 
     const unsubscribeApplications = onSnapshot(applicationsQuery, (snapshot) => {
-      const offersMade = snapshot.docs.filter(doc => doc.data().status === 'offer').length;
-      updateSummaryCard("Total Applicants", snapshot.size);
+      const allApplications = snapshot.docs.map(doc => doc.data() as Application);
+      const offersMade = allApplications.filter(app => app.status === 'offer').length;
+
+      updateSummaryCard("Total Applicants", allApplications.length);
       updateSummaryCard("Offers Made", offersMade);
     });
 
@@ -239,7 +235,7 @@ export function RecruiterDashboard() {
                               {recentJobs.length > 0 ? recentJobs.map((job) => (
                                   <TableRow key={job.id}>
                                       <TableCell className="font-medium">{job.jobTitle}</TableCell>
-                                      <TableCell className="text-center">{job.applicantsCount ?? 0}</TableCell>
+                                      <TableCell className="text-center">{job.applicants?.length ?? 0}</TableCell>
                                       <TableCell className="text-center">
                                         <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
                                           {job.status === 'open' ? 'Open' : 'Closed'}
@@ -330,3 +326,5 @@ export function RecruiterDashboard() {
     </Sheet>
   );
 }
+
+    

@@ -19,7 +19,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/fi
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import React, { useEffect } from "react";
-import { Job } from "@/lib/types";
+import { Job, Recruiter } from "@/lib/types";
 
 const formSchema = z.object({
   jobTitle: z.string().min(5, "Job title must be at least 5 characters."),
@@ -91,7 +91,7 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
         const jobRef = doc(db, "jobs", initialData.id);
         await updateDoc(jobRef, {
             ...jobData,
-            status: 'open',
+            status: initialData.status, // Preserve existing status
         });
         toast({ title: "Success!", description: "The job posting has been updated." });
 
@@ -100,9 +100,10 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
         await addDoc(collection(db, "jobs"), {
             ...jobData,
             recruiterId: userProfile.uid,
-            companyName: userProfile.companyName,
+            companyName: (userProfile as Recruiter).companyName,
             status: 'open',
             createdAt: serverTimestamp(),
+            applicants: [],
         });
         toast({ title: "Success!", description: "Your job posting has been created." });
       }
