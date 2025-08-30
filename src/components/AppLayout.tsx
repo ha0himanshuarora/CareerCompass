@@ -15,7 +15,7 @@ import {
   Settings,
   GanttChartSquare,
   Building,
-  School
+  Handshake
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -41,13 +41,15 @@ const recruiterNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/jobs", icon: Briefcase, label: "Job Postings" },
   { href: "/candidates", icon: Users, label: "Candidates" },
+  { href: "/tpo", icon: Handshake, label: "Collaborate with TPOs" },
 ];
 
 const tpoNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/students", icon: Users, label: "Students" },
-  { href: "/companies", icon: Building, label: "Companies" },
-  { href: "/placements", icon: School, label: "Placements" },
+  { href: "/tpo/students", icon: Users, label: "Students" },
+  { href: "/tpo/companies", icon: Building, label: "Companies" },
+  { href: "/tpo/jobs", icon: Briefcase, label: "Job Postings" },
+  { href: "/tpo/collaborations", icon: Handshake, label: "Collaborations" },
 ];
 
 
@@ -72,8 +74,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       case 'recruiter':
         return recruiterNavItems;
       case 'tpo':
-         // For now, only show dashboard, as per request
-        return [tpoNavItems[0]];
+        return tpoNavItems;
       default:
         return [];
     }

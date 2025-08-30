@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { Compass, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RoleSelector } from "@/components/RoleSelector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -33,6 +34,8 @@ export default function SignupPage() {
   const [instituteName, setInstituteName] = useState('');
   const [branch, setBranch] = useState('');
   const [graduationYear, setGraduationYear] = useState('');
+  const [instituteOptions, setInstituteOptions] = useState<{ value: string; label: string }[]>([]);
+
 
   // Recruiter fields
   const [hrContact, setHrContact] = useState('');
@@ -41,6 +44,30 @@ export default function SignupPage() {
 
   // TPO fields
   const [contactNumber, setContactNumber] = useState('');
+
+  useEffect(() => {
+    const fetchInstitutes = async () => {
+        try {
+            const tposQuery = query(collection(db, "users"), where("role", "==", "tpo"));
+            const querySnapshot = await getDocs(tposQuery);
+            const institutes = new Set<string>();
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.instituteName) {
+                    institutes.add(data.instituteName);
+                }
+            });
+            setInstituteOptions(Array.from(institutes).map(name => ({ value: name, label: name })));
+        } catch (error) {
+            console.error("Error fetching institutes:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not fetch institute list." });
+        }
+    };
+    
+    if (role === 'student') {
+        fetchInstitutes();
+    }
+  }, [role, toast]);
 
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -112,7 +139,17 @@ export default function SignupPage() {
             <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" placeholder="sonya@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="confirmPassword">Confirm Password</Label><Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
-            <div className="grid gap-2"><Label htmlFor="instituteName">Institute Name</Label><Input id="instituteName" required value={instituteName} onChange={(e) => setInstituteName(e.target.value)} /></div>
+            <div className="grid gap-2">
+                <Label htmlFor="instituteName">Institute Name</Label>
+                 <Combobox
+                    options={instituteOptions}
+                    value={instituteName}
+                    onChange={setInstituteName}
+                    placeholder="Select or type institute..."
+                    searchPlaceholder="Search institutes..."
+                    notFoundMessage="No institute found."
+                />
+            </div>
             <div className="grid gap-2"><Label htmlFor="branch">Branch</Label><Input id="branch" required value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
             <div className="grid gap-2">
                 <Label htmlFor="graduationYear">Graduation Year</Label>
