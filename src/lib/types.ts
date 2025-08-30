@@ -68,7 +68,7 @@ export interface Student {
         locations: string[];
         packageExpectation: string;
     };
-    isPlaced?: boolean; 
+    isPlaced: boolean; 
 }
 
 
@@ -223,6 +223,7 @@ export interface Application {
     resumeId: string;
     status: 'applied' | 'shortlisted' | 'interview' | 'offer' | 'joined' | 'rejected';
     appliedDate: any; // Firestore timestamp
+    offerLetterId?: string;
 }
 
 export interface Recruiter {
@@ -299,4 +300,23 @@ export interface StudentTestResult {
     score: number;
     totalQuestions: number;
     submittedAt: any; // Firestore timestamp
+}
+
+export interface OfferLetter {
+    id: string;
+    applicationId: string;
+    jobId: string;
+    studentId: string;
+    recruiterId: string;
+    issuedAt: any; // Firestore Timestamp
+    content: {
+        studentName: string;
+        companyName: string;
+        recruiterName: string;
+        recruiterEmail: string;
+        jobTitle: string;
+        joiningDate: any; // Date
+        ctc: string;
+        stipend?: string;
+    };
 }

@@ -16,7 +16,8 @@ import {
   Building,
   Handshake,
   FileQuestion,
-  Trophy
+  Trophy,
+  ScrollText
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -46,6 +47,7 @@ const recruiterNavItems = [
   { href: "/candidates", icon: Users, label: "Candidates" },
   { href: "/tests", icon: FileQuestion, label: "Manage Tests" },
   { href: "/collaborations", icon: Handshake, label: "Collaborations" },
+  { href: "/offer-letters", icon: ScrollText, label: "Offer Letters" },
 ];
 
 const tpoNavItems = [
@@ -99,7 +101,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}
                   href={item.href}
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
                   tooltip={item.label}
                 >
                   <item.icon className="size-5" />

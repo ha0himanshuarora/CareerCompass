@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { Job, Application, Resume, Recruiter } from "@/lib/types";
+import { Job, Application, Resume, Recruiter, Student } from "@/lib/types";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
-import { Loader2, Briefcase, Building, Wallet, Calendar, Check, ArrowLeft, FileText, MapPin, Dot } from "lucide-react";
+import { Loader2, Briefcase, Building, Wallet, Calendar, Check, ArrowLeft, FileText, MapPin, Dot, Info } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function JobDetailsPage() {
     const { userProfile } = useAuth();
@@ -31,6 +32,8 @@ export default function JobDetailsPage() {
     const [selectedResume, setSelectedResume] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [applying, setApplying] = useState(false);
+    
+    const student = userProfile as Student;
 
     useEffect(() => {
         if (!userProfile) return;
@@ -265,38 +268,48 @@ export default function JobDetailsPage() {
                        </div>
                        
                         <div className="pt-6 border-t">
-                            <div className="max-w-xs mx-auto space-y-4">
-                                <div className="grid w-full items-center gap-1.5">
-                                    <Label htmlFor="resume-select" className="flex items-center gap-2 font-semibold">
-                                        <FileText className="h-4 w-4" />
-                                        Select Resume to Apply
-                                    </Label>
-                                    <Select onValueChange={setSelectedResume} value={selectedResume} disabled={hasApplied}>
-                                        <SelectTrigger id="resume-select" className="w-full">
-                                            <SelectValue placeholder="Choose a resume..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {resumes.length > 0 ? (
-                                                resumes.map(resume => (
-                                                    <SelectItem key={resume.id} value={resume.id}>{resume.title}</SelectItem>
-                                                ))
-                                            ) : (
-                                                <SelectItem value="no-resume" disabled>No resumes found. Create one first.</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                             {student?.isPlaced ? (
+                                <Alert variant="default" className="max-w-xs mx-auto">
+                                    <Info className="h-4 w-4" />
+                                    <AlertTitle>You Are Placed!</AlertTitle>
+                                    <AlertDescription>
+                                        Congratulations! Since you have already accepted an offer, you cannot apply for new jobs.
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                <div className="max-w-xs mx-auto space-y-4">
+                                    <div className="grid w-full items-center gap-1.5">
+                                        <Label htmlFor="resume-select" className="flex items-center gap-2 font-semibold">
+                                            <FileText className="h-4 w-4" />
+                                            Select Resume to Apply
+                                        </Label>
+                                        <Select onValueChange={setSelectedResume} value={selectedResume} disabled={hasApplied}>
+                                            <SelectTrigger id="resume-select" className="w-full">
+                                                <SelectValue placeholder="Choose a resume..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {resumes.length > 0 ? (
+                                                    resumes.map(resume => (
+                                                        <SelectItem key={resume.id} value={resume.id}>{resume.title}</SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <SelectItem value="no-resume" disabled>No resumes found. Create one first.</SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                                <Button
-                                    size="lg"
-                                    className="w-full"
-                                    onClick={handleApply}
-                                    disabled={applying || hasApplied || resumes.length === 0}
-                                >
-                                    {applying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    {hasApplied ? <><Check className="mr-2 h-4 w-4"/>Applied</> : 'Confirm Application'}
-                                </Button>
-                            </div>
+                                    <Button
+                                        size="lg"
+                                        className="w-full"
+                                        onClick={handleApply}
+                                        disabled={applying || hasApplied || resumes.length === 0}
+                                    >
+                                        {applying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                        {hasApplied ? <><Check className="mr-2 h-4 w-4"/>Applied</> : 'Confirm Application'}
+                                    </Button>
+                                </div>
+                            )}
                        </div>
 
                     </CardContent>

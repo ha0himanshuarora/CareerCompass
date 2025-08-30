@@ -13,10 +13,11 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Job, Application, Student, Test } from "@/lib/types";
 import { useEffect, useState } from "react";
-import { Loader2, ChevronsUpDown } from "lucide-react";
+import { Loader2, ChevronsUpDown, CheckCircle2 } from "lucide-react";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -39,10 +40,12 @@ interface ViewApplicantsDialogProps {
 interface Applicant extends Student {
     applicationId: string;
     status: Application['status'];
+    isPlaced: boolean;
 }
 
 export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialogProps) {
     const { userProfile } = useAuth();
+    const router = useRouter();
     const [applicants, setApplicants] = useState<Applicant[]>([]);
     const [recruiterTests, setRecruiterTests] = useState<Test[]>([]);
     const [loading, setLoading] = useState(false);
@@ -69,7 +72,8 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
                     return {
                         ...student,
                         applicationId: application.id,
-                        status: application.status
+                        status: application.status,
+                        isPlaced: student.isPlaced || false,
                     };
                 }
                 return null;
@@ -93,21 +97,27 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
         };
     }, [job, userProfile]);
     
-    const handleStatusChange = async (applicationId: string, newStatus: Application['status']) => {
-        try {
-            const appRef = doc(db, "applications", applicationId);
-            await updateDoc(appRef, { status: newStatus });
-            toast({
-                title: "Status Updated",
-                description: "The application status has been successfully updated.",
-            });
-        } catch (error) {
-            console.error("Error updating status:", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to update application status.",
-            });
+    const handleStatusChange = async (applicant: Applicant, newStatus: Application['status']) => {
+        if (newStatus === 'offer') {
+            // Redirect to offer letter creation page
+            router.push(`/offer-letters/new?jobId=${job?.id}&studentId=${applicant.uid}&applicationId=${applicant.applicationId}`);
+            onOpenChange(false);
+        } else {
+            try {
+                const appRef = doc(db, "applications", applicant.applicationId);
+                await updateDoc(appRef, { status: newStatus });
+                toast({
+                    title: "Status Updated",
+                    description: "The application status has been successfully updated.",
+                });
+            } catch (error) {
+                console.error("Error updating status:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Failed to update application status.",
+                });
+            }
         }
     };
     
@@ -165,7 +175,8 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
                     <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Placement Status</TableHead>
+                        <TableHead>Application Status</TableHead>
                         <TableHead>Assign Test</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -176,9 +187,19 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
                             <TableCell className="font-medium">{applicant.name}</TableCell>
                             <TableCell>{applicant.email}</TableCell>
                             <TableCell>
+                                {applicant.isPlaced ? (
+                                    <Badge variant="secondary" className="text-green-600 border-green-600/50">
+                                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5"/>
+                                        Placed
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline">Available</Badge>
+                                )}
+                            </TableCell>
+                            <TableCell>
                                 <Select 
                                     value={applicant.status}
-                                    onValueChange={(newStatus) => handleStatusChange(applicant.applicationId, newStatus as Application['status'])}
+                                    onValueChange={(newStatus) => handleStatusChange(applicant, newStatus as Application['status'])}
                                 >
                                     <SelectTrigger className="w-36">
                                         <SelectValue placeholder="Select status" />
@@ -193,7 +214,7 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
                             <TableCell>
                                  <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-36 justify-between">
+                                        <Button variant="outline" className="w-36 justify-between" disabled={applicant.isPlaced}>
                                             Select Test <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>

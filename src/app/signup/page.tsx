@@ -105,6 +105,7 @@ export default function SignupPage() {
         userData.instituteName = instituteName;
         userData.branch = branch;
         userData.graduationYear = graduationYear;
+        userData.isPlaced = false; // Default value
       } else if (role === 'recruiter') {
         userData.companyName = companyName;
         userData.hrContact = hrContact;
