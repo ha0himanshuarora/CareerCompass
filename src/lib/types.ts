@@ -2,6 +2,53 @@
 
 
 
+
+export interface Resume {
+    id: string;
+    studentId: string;
+    title: string;
+    template: 'onyx' | 'opal' | 'topaz';
+    personalInfo: {
+        name: string;
+        email: string;
+        mobile: string;
+        enrollment: string;
+        branch: string;
+        passingYear: string;
+        linkedin?: string;
+        github?: string;
+    };
+    careerObjective: string;
+    skills: string[];
+    projects: {
+        title: string;
+        description: string;
+        githubLink?: string;
+        liveLink?: string;
+    }[];
+    academicDetails: {
+        degree: string;
+        institute: string;
+        cgpa: string;
+        year: string;
+    }[];
+    experience?: {
+        company: string;
+        role: string;
+        duration: string;
+        description: string;
+    }[];
+    certifications?: {
+        name: string;
+        issuer: string;
+        date: string;
+        link?: string;
+    }[];
+    createdAt: any; // Firestore Timestamp
+    updatedAt: any; // Firestore Timestamp
+}
+
+
 export interface Job {
     id: string;
     jobTitle: string;
@@ -16,7 +63,6 @@ export interface Job {
     createdAt: any; // Firestore Timestamp
     status: 'open' | 'closed';
     applicants?: string[]; // Array of student UIDs
-    applicantsCount?: number;
 }
 
 export interface Interview {
@@ -36,6 +82,7 @@ export interface Application {
     companyName: string;
     studentId: string;
     recruiterId: string;
+    resumeId: string;
     status: 'applied' | 'test' | 'shortlisted' | 'interview' | 'offer' | 'joined' | 'rejected';
     appliedDate: any; // Firestore timestamp
 }

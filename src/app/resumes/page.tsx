@@ -1,18 +1,40 @@
+
+"use client";
+
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Eye, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
-
-const resumes = [
-  { id: 1, title: "Software Engineer Resume", template: "Modern", lastUpdated: "2 days ago", previewUrl: "https://picsum.photos/400/566?random=1" },
-  { id: 2, title: "Data Analyst CV", template: "Classic", lastUpdated: "1 week ago", previewUrl: "https://picsum.photos/400/566?random=2" },
-  { id: 3, title: "UX Designer Portfolio Resume", template: "Creative", lastUpdated: "3 weeks ago", previewUrl: "https://picsum.photos/400/566?random=3" },
-];
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { Resume } from "@/lib/types";
 
 export default function ResumesPage() {
+  const { userProfile } = useAuth();
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userProfile) return;
+
+    setLoading(true);
+    const resumesQuery = query(collection(db, "resumes"), where("studentId", "==", userProfile.uid));
+
+    const unsubscribe = onSnapshot(resumesQuery, (snapshot) => {
+      const resumesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resume));
+      setResumes(resumesData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching resumes: ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile]);
+
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
@@ -20,50 +42,52 @@ export default function ResumesPage() {
           <h1 className="text-3xl font-bold font-headline">My Resumes</h1>
           <p className="text-muted-foreground">Create and manage your professional resumes.</p>
         </div>
-        <Button>
-          <Plus className="-ml-1 mr-2 h-4 w-4" />
-          Create New Resume
+        <Button asChild>
+          <Link href="/resumes/new">
+            <Plus className="-ml-1 mr-2 h-4 w-4" />
+            Create New Resume
+          </Link>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {resumes.map((resume) => (
-          <Card key={resume.id} className="group overflow-hidden">
-            <CardHeader className="p-0">
-               <div className="relative aspect-[3/4] overflow-hidden">
-                    <Image src={resume.previewUrl} data-ai-hint="resume document" alt={resume.title} fill className="object-cover transition-transform group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-               </div>
-            </CardHeader>
-            <CardContent className="p-4">
-                 <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle className="text-base font-headline">{resume.title}</CardTitle>
-                        <CardDescription className="text-xs">Last updated: {resume.lastUpdated}</CardDescription>
-                    </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 -mt-2 -mr-2">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                        <DropdownMenuItem><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>
-                        <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                 </div>
-            </CardContent>
-          </Card>
-        ))}
-         <Card className="flex items-center justify-center border-dashed border-2 hover:border-primary hover:text-primary transition-colors cursor-pointer min-h-80">
-            <div className="text-center">
-                <Plus className="mx-auto h-8 w-8 text-muted-foreground" />
-                <p className="mt-2 text-sm font-semibold">Create New</p>
-            </div>
-        </Card>
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {resumes.map((resume) => (
+            <Card key={resume.id} className="flex flex-col">
+              <CardHeader>
+                  <CardTitle className="font-headline">{resume.title}</CardTitle>
+                  <CardDescription>
+                    Last updated: {resume.updatedAt?.toDate().toLocaleDateString() ?? 'N/A'}
+                  </CardDescription>
+              </CardHeader>
+              <CardFooter className="mt-auto flex items-center gap-2">
+                <Button variant="outline" size="sm" className="w-full" asChild>
+                  <Link href={`/resumes/edit/${resume.id}`}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Link>
+                </Button>
+                <Button size="sm" className="w-full" asChild>
+                  <Link href={`/resumes/${resume.id}`}>
+                    <Eye className="mr-2 h-4 w-4" /> View
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+          <Link href="/resumes/new">
+            <Card className="flex items-center justify-center border-dashed border-2 hover:border-primary hover:text-primary transition-colors cursor-pointer min-h-48 h-full">
+                <div className="text-center">
+                    <Plus className="mx-auto h-8 w-8 text-muted-foreground" />
+                    <p className="mt-2 text-sm font-semibold">Create New</p>
+                </div>
+            </Card>
+          </Link>
+        </div>
+      )}
     </AppLayout>
   );
 }

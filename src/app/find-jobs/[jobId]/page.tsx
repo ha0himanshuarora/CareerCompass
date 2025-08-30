@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { Job, Application } from "@/lib/types";
+import { Job, Application, Resume } from "@/lib/types";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
-import { Loader2, Briefcase, Building, Wallet, Calendar, Check, ArrowLeft } from "lucide-react";
+import { Loader2, Briefcase, Building, Wallet, Calendar, Check, ArrowLeft, FileText } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter } from "next/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function JobDetailsPage() {
     const { userProfile } = useAuth();
@@ -24,15 +26,17 @@ export default function JobDetailsPage() {
     
     const [job, setJob] = useState<Job | null>(null);
     const [applications, setApplications] = useState<Application[]>([]);
+    const [resumes, setResumes] = useState<Resume[]>([]);
+    const [selectedResume, setSelectedResume] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [applying, setApplying] = useState(false);
 
     useEffect(() => {
         if (!userProfile) return;
         
+        setLoading(true);
         const fetchJobDetails = async () => {
             if (!jobId) return;
-            setLoading(true);
             try {
                 const jobRef = doc(db, "jobs", jobId);
                 const jobSnap = await getDoc(jobRef);
@@ -58,8 +62,19 @@ export default function JobDetailsPage() {
             const appData = snapshot.docs.map(doc => doc.data() as Application);
             setApplications(appData);
         });
+        
+        // Fetch student's resumes
+        const resumesQuery = query(collection(db, "resumes"), where("studentId", "==", userProfile.uid));
+        const unsubscribeResumes = onSnapshot(resumesQuery, (snapshot) => {
+            const resumeData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Resume);
+            setResumes(resumeData);
+        });
 
-        return () => unsubscribeApps();
+
+        return () => {
+            unsubscribeApps();
+            unsubscribeResumes();
+        }
 
     }, [userProfile, jobId, router, toast]);
 
@@ -72,6 +87,10 @@ export default function JobDetailsPage() {
             toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply." });
             return;
         }
+        if (!selectedResume) {
+            toast({ variant: "destructive", title: "Error", description: "Please select a resume to apply with." });
+            return;
+        }
         setApplying(true);
         try {
             // Add to applications collection
@@ -81,6 +100,7 @@ export default function JobDetailsPage() {
                 companyName: job.companyName,
                 studentId: userProfile.uid,
                 recruiterId: job.recruiterId,
+                resumeId: selectedResume,
                 status: 'applied',
                 appliedDate: serverTimestamp(),
             });
@@ -175,16 +195,39 @@ export default function JobDetailsPage() {
                             </div>
                        </div>
                        
-                       <div className="pt-6 text-center">
-                            <Button 
-                                size="lg"
-                                className="w-full max-w-xs" 
-                                onClick={handleApply}
-                                disabled={applying || hasApplied}
-                            >
-                                {applying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                {hasApplied ? <><Check className="mr-2 h-4 w-4"/>Applied</> : 'Confirm Application'}
-                            </Button>
+                        <div className="pt-6 border-t">
+                            <div className="max-w-xs mx-auto space-y-4">
+                                <div className="grid w-full items-center gap-1.5">
+                                    <Label htmlFor="resume-select" className="flex items-center gap-2 font-semibold">
+                                        <FileText className="h-4 w-4" />
+                                        Select Resume to Apply
+                                    </Label>
+                                    <Select onValueChange={setSelectedResume} value={selectedResume} disabled={hasApplied}>
+                                        <SelectTrigger id="resume-select" className="w-full">
+                                            <SelectValue placeholder="Choose a resume..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {resumes.length > 0 ? (
+                                                resumes.map(resume => (
+                                                    <SelectItem key={resume.id} value={resume.id}>{resume.title}</SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value="no-resume" disabled>No resumes found. Create one first.</SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <Button
+                                    size="lg"
+                                    className="w-full"
+                                    onClick={handleApply}
+                                    disabled={applying || hasApplied || resumes.length === 0}
+                                >
+                                    {applying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    {hasApplied ? <><Check className="mr-2 h-4 w-4"/>Applied</> : 'Confirm Application'}
+                                </Button>
+                            </div>
                        </div>
 
                     </CardContent>
@@ -193,3 +236,5 @@ export default function JobDetailsPage() {
         </AppLayout>
     );
 }
+
+    

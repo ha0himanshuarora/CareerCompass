@@ -24,7 +24,7 @@ interface SummaryCard {
   title: string;
   value: number;
   icon: React.ElementType;
-  change: string;
+  change?: string;
 }
 
 
@@ -46,27 +46,23 @@ export function RecruiterDashboard() {
   useEffect(() => {
     if (!userProfile) return;
 
+    setLoading(true);
     const recruiterId = userProfile.uid;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
 
+    const initialSummary: SummaryCard[] = [
+      { title: "Active Jobs", value: 0, icon: Briefcase, change: "" },
+      { title: "Total Applicants", value: 0, icon: Users, change: "" },
+      { title: "Interviews Scheduled", value: 0, icon: MessageSquare, change: "None today" },
+      { title: "Offers Made", value: 0, icon: Target, change: "" },
+    ];
+    setSummaryCards(initialSummary);
+    
+    // --- Jobs Listener ---
     const jobsQuery = query(collection(db, "jobs"), where("recruiterId", "==", recruiterId));
-    const applicationsQuery = query(collection(db, "applications"), where("recruiterId", "==", recruiterId));
-    const interviewsQuery = query(collection(db, "interviews"), 
-      where("recruiterId", "==", recruiterId),
-      where("interviewDate", ">=", Timestamp.fromDate(today)),
-      where("interviewDate", "<", Timestamp.fromDate(tomorrow))
-    );
-
     const unsubscribeJobs = onSnapshot(jobsQuery, (snapshot) => {
       const jobsData = snapshot.docs.map(docSnapshot => {
         const data = docSnapshot.data();
-        const job: Job = { 
-            id: docSnapshot.id,
-            ...data
-        } as Job;
+        const job: Job = { id: docSnapshot.id, ...data } as Job;
         
         const deadlineDate = new Date(job.deadline);
         const today = new Date();
@@ -75,48 +71,45 @@ export function RecruiterDashboard() {
           updateDoc(docSnapshot.ref, { status: 'closed' });
           job.status = 'closed';
         }
-
         return job;
       });
       
+      const activeJobsCount = jobsData.filter(j => j.status === 'open').length;
       setRecentJobs(jobsData.slice(0, 4));
-      
-      const activeJobs = jobsData.filter(j => j.status === 'open').length;
-      updateSummaryCard("Active Jobs", activeJobs);
-
-      setLoading(false);
+      setSummaryCards(prev => prev.map(c => c.title === "Active Jobs" ? { ...c, value: activeJobsCount } : c));
+      setLoading(false); // Set loading to false after first job fetch
     });
 
+    // --- Applications Listener ---
+    const applicationsQuery = query(collection(db, "applications"), where("recruiterId", "==", recruiterId));
     const unsubscribeApplications = onSnapshot(applicationsQuery, (snapshot) => {
-      const allApplications = snapshot.docs.map(doc => doc.data() as Application);
-      const offersMade = allApplications.filter(app => app.status === 'offer').length;
-
-      updateSummaryCard("Total Applicants", allApplications.length);
-      updateSummaryCard("Offers Made", offersMade);
+      const totalApplicants = snapshot.size;
+      const offersMade = snapshot.docs.filter(doc => doc.data().status === 'offer').length;
+      setSummaryCards(prev => prev.map(c => {
+          if (c.title === "Total Applicants") return { ...c, value: totalApplicants };
+          if (c.title === "Offers Made") return { ...c, value: offersMade };
+          return c;
+      }));
     });
 
+    // --- Interviews Listener ---
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const interviewsQuery = query(collection(db, "interviews"),
+      where("recruiterId", "==", recruiterId),
+      where("interviewDate", ">=", Timestamp.fromDate(today)),
+      where("interviewDate", "<", Timestamp.fromDate(tomorrow))
+    );
     const unsubscribeInterviews = onSnapshot(interviewsQuery, (snapshot) => {
-       const interviewsData: Interview[] = snapshot.docs.map(doc => {
-         const data = doc.data();
-         return {
-          id: doc.id,
-          candidateName: data.candidateName,
-          jobTitle: data.jobTitle,
-          interviewDate: data.interviewDate,
-          type: data.type,
-         }
-       });
-       setUpcomingInterviews(interviewsData);
-       updateSummaryCard("Interviews Scheduled", snapshot.size, snapshot.size > 0 ? `${snapshot.size} today` : "None today");
+      const interviewsData: Interview[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Interview));
+      setUpcomingInterviews(interviewsData);
+      setSummaryCards(prev => prev.map(c => 
+        c.title === "Interviews Scheduled" ? { ...c, value: interviewsData.length, change: interviewsData.length > 0 ? `${interviewsData.length} today` : "None today" } : c
+      ));
     });
-    
-    setSummaryCards([
-        { title: "Active Jobs", value: 0, icon: Briefcase, change: "" },
-        { title: "Total Applicants", value: 0, icon: Users, change: "" },
-        { title: "Interviews Scheduled", value: 0, icon: MessageSquare, change: "None today" },
-        { title: "Offers Made", value: 0, icon: Target, change: "" },
-    ]);
-
 
     return () => {
       unsubscribeJobs();
@@ -124,14 +117,6 @@ export function RecruiterDashboard() {
       unsubscribeInterviews();
     };
   }, [userProfile]);
-
-  const updateSummaryCard = (title: string, value: number, change: string = "") => {
-    setSummaryCards(prevCards => 
-      prevCards.map(card => 
-        card.title === title ? { ...card, value, change } : card
-      )
-    );
-  };
 
   const handleOpenSheet = (job: Job | null) => {
     setJobToEdit(job);
@@ -209,7 +194,7 @@ export function RecruiterDashboard() {
                       </CardHeader>
                       <CardContent>
                           <div className="text-2xl font-bold">{card.value}</div>
-                          <p className="text-xs text-muted-foreground">{card.change}</p>
+                          {card.change && <p className="text-xs text-muted-foreground">{card.change}</p>}
                       </CardContent>
                   </Card>
               ))}
@@ -326,5 +311,3 @@ export function RecruiterDashboard() {
     </Sheet>
   );
 }
-
-    

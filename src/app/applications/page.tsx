@@ -12,6 +12,7 @@ export default function ApplicationsPage() {
             <h1 className="text-3xl font-bold font-headline">Job Application Tracker</h1>
             <p className="text-muted-foreground">Manage your job applications from start to finish.</p>
           </div>
+          {/* This button is currently a placeholder */}
           <Button>
             <Plus className="-ml-1 mr-2 h-4 w-4" />
             Add Application
