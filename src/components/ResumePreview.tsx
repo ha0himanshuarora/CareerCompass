@@ -3,7 +3,7 @@
 
 import { Resume } from "@/lib/types";
 import React from "react";
-import { Mail, Phone, Linkedin, Github, Globe, LinkIcon } from "lucide-react";
+import { Mail, Phone, Linkedin, Github, Globe, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Template Components
@@ -13,17 +13,19 @@ const OnyxTemplate = ({ resume }: { resume: Resume }) => (
             <h1 className="text-4xl font-bold tracking-wider uppercase">{resume.personalInfo.name}</h1>
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
                 <a href={`mailto:${resume.personalInfo.email}`} className="flex items-center gap-1.5 hover:text-blue-600"><Mail className="size-3"/>{resume.personalInfo.email}</a>
-                <span className="flex items-center gap-1.5"><Phone className="size-3"/>{resume.personalInfo.mobile}</span>
+                {resume.personalInfo.phone && <span className="flex items-center gap-1.5"><Phone className="size-3"/>{resume.personalInfo.phone}</span>}
                 {resume.personalInfo.linkedin && <a href={resume.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-blue-600"><Linkedin className="size-3"/>LinkedIn</a>}
                 {resume.personalInfo.github && <a href={resume.personalInfo.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-blue-600"><Github className="size-3"/>GitHub</a>}
             </div>
         </header>
 
         <main className="space-y-5">
-            <section>
-                <h2 className="text-sm font-bold uppercase tracking-widest border-b-2 border-gray-300 pb-1 mb-2">Career Objective</h2>
-                <p className="text-sm leading-relaxed">{resume.careerObjective}</p>
-            </section>
+            {resume.careerObjective && (
+                <section>
+                    <h2 className="text-sm font-bold uppercase tracking-widest border-b-2 border-gray-300 pb-1 mb-2">Career Objective</h2>
+                    <p className="text-sm leading-relaxed">{resume.careerObjective}</p>
+                </section>
+            )}
             
             <section>
                 <h2 className="text-sm font-bold uppercase tracking-widest border-b-2 border-gray-300 pb-1 mb-2">Education</h2>
@@ -34,7 +36,7 @@ const OnyxTemplate = ({ resume }: { resume: Resume }) => (
                             <p className="font-bold">{ad.year}</p>
                         </div>
                          <div className="flex justify-between">
-                            <p>{ad.degree}</p>
+                            <p>{ad.degree} ({ad.level})</p>
                             <p>CGPA: {ad.cgpa}</p>
                         </div>
                     </div>
@@ -59,7 +61,7 @@ const OnyxTemplate = ({ resume }: { resume: Resume }) => (
 
             <section>
                 <h2 className="text-sm font-bold uppercase tracking-widest border-b-2 border-gray-300 pb-1 mb-2">Skills</h2>
-                <p className="text-sm leading-relaxed">{resume.skills.join(' | ')}</p>
+                <p className="text-sm leading-relaxed">{resume.skills.map(s => s.name).join(' | ')}</p>
             </section>
             
             <section>
@@ -72,6 +74,7 @@ const OnyxTemplate = ({ resume }: { resume: Resume }) => (
                             {p.liveLink && <a href={p.liveLink} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-600"><Globe className="size-3"/></a>}
                         </div>
                         <p className="text-xs leading-relaxed">{p.description}</p>
+                        <p className="text-xs mt-1"><b>Skills Used:</b> {p.skillsUsed.join(', ')}</p>
                     </div>
                 ))}
             </section>
@@ -102,21 +105,21 @@ const OpalTemplate = ({ resume }: { resume: Resume }) => (
             <div className="mt-6 space-y-3 text-xs">
                  <h2 className="font-bold text-gray-900 text-sm uppercase tracking-wider">Contact</h2>
                  <a href={`mailto:${resume.personalInfo.email}`} className="flex items-center gap-2 hover:text-cyan-700"><Mail className="size-3"/>{resume.personalInfo.email}</a>
-                 <p className="flex items-center gap-2"><Phone className="size-3"/>{resume.personalInfo.mobile}</p>
+                 {resume.personalInfo.phone && <p className="flex items-center gap-2"><Phone className="size-3"/>{resume.personalInfo.phone}</p>}
                  {resume.personalInfo.linkedin && <a href={resume.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-700"><Linkedin className="size-3"/>LinkedIn</a>}
                  {resume.personalInfo.github && <a href={resume.personalInfo.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-700"><Github className="size-3"/>GitHub</a>}
             </div>
 
             <div className="mt-6 space-y-2 text-xs">
                 <h2 className="font-bold text-gray-900 text-sm uppercase tracking-wider">Skills</h2>
-                {resume.skills.map(s => <p key={s}>{s}</p>)}
+                {resume.skills.map(s => <p key={s.name}>{s.name}</p>)}
             </div>
 
              <div className="mt-6 space-y-2 text-xs">
                 <h2 className="font-bold text-gray-900 text-sm uppercase tracking-wider">Education</h2>
                 {resume.academicDetails.map((ad, i) => (
                     <div key={i}>
-                        <p className="font-bold">{ad.degree}</p>
+                        <p className="font-bold">{ad.degree} ({ad.level})</p>
                         <p>{ad.institute}</p>
                         <p>{ad.year} - {ad.cgpa} CGPA</p>
                     </div>
@@ -125,10 +128,12 @@ const OpalTemplate = ({ resume }: { resume: Resume }) => (
         </aside>
 
         <main className="w-2/3">
-             <section>
-                <h2 className="text-xl font-bold text-cyan-800 tracking-wider border-b-2 border-cyan-800 pb-1 mb-3">Career Objective</h2>
-                <p className="text-sm leading-relaxed">{resume.careerObjective}</p>
-            </section>
+             {resume.careerObjective && (
+                <section>
+                    <h2 className="text-xl font-bold text-cyan-800 tracking-wider border-b-2 border-cyan-800 pb-1 mb-3">Career Objective</h2>
+                    <p className="text-sm leading-relaxed">{resume.careerObjective}</p>
+                </section>
+             )}
             
             {resume.experience && resume.experience.length > 0 && (
                  <section className="mt-6">
@@ -156,6 +161,7 @@ const OpalTemplate = ({ resume }: { resume: Resume }) => (
                             {p.liveLink && <a href={p.liveLink} target="_blank" rel="noopener noreferrer" className="text-cyan-700 hover:text-cyan-900"><Globe className="size-4"/></a>}
                         </div>
                         <p className="text-xs leading-relaxed">{p.description}</p>
+                        <p className="text-xs mt-1"><b>Skills:</b> {p.skillsUsed.join(', ')}</p>
                     </div>
                 ))}
             </section>
@@ -185,14 +191,14 @@ const TopazTemplate = ({ resume }: { resume: Resume }) => (
             </div>
              <div className="text-right text-xs space-y-1">
                 <a href={`mailto:${resume.personalInfo.email}`} className="flex items-center justify-end gap-2 hover:text-slate-900 font-semibold"><Mail className="size-3"/>{resume.personalInfo.email}</a>
-                <p className="flex items-center justify-end gap-2"><Phone className="size-3"/>{resume.personalInfo.mobile}</p>
+                {resume.personalInfo.phone && <p className="flex items-center justify-end gap-2"><Phone className="size-3"/>{resume.personalInfo.phone}</p>}
                 {resume.personalInfo.linkedin && <a href={resume.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center justify-end gap-2 hover:text-slate-900 font-semibold"><Linkedin className="size-3"/>LinkedIn</a>}
                 {resume.personalInfo.github && <a href={resume.personalInfo.github} target="_blank" rel="noopener noreferrer" className="flex items-center justify-end gap-2 hover:text-slate-900 font-semibold"><Github className="size-3"/>GitHub</a>}
             </div>
         </header>
         
         <main className="mt-6">
-            <p className="text-sm italic text-center mb-6">{resume.careerObjective}</p>
+            {resume.careerObjective && <p className="text-sm italic text-center mb-6">{resume.careerObjective}</p>}
             
             <div className="grid grid-cols-3 gap-8">
                 <div className="col-span-2 space-y-6">
@@ -219,6 +225,7 @@ const TopazTemplate = ({ resume }: { resume: Resume }) => (
                                     {p.liveLink && <a href={p.liveLink} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-slate-900"><Globe className="size-4"/></a>}
                                 </div>
                                 <p className="text-xs leading-relaxed mt-1">{p.description}</p>
+                                <p className="text-xs mt-1"><b>Skills Used:</b> {p.skillsUsed.join(', ')}</p>
                             </div>
                         ))}
                     </section>
@@ -229,7 +236,7 @@ const TopazTemplate = ({ resume }: { resume: Resume }) => (
                         <h2 className="text-lg font-bold text-slate-700 uppercase tracking-wider mb-2">Education</h2>
                         {resume.academicDetails.map((ad, i) => (
                             <div key={i} className="text-sm mb-2">
-                                <p className="font-semibold">{ad.degree}</p>
+                                <p className="font-semibold">{ad.degree} ({ad.level})</p>
                                 <p className="text-xs">{ad.institute}</p>
                                 <p className="text-xs">{ad.year} | {ad.cgpa} CGPA</p>
                             </div>
@@ -239,7 +246,7 @@ const TopazTemplate = ({ resume }: { resume: Resume }) => (
                          <h2 className="text-lg font-bold text-slate-700 uppercase tracking-wider mb-2">Skills</h2>
                          <div className="flex flex-wrap gap-1.5">
                             {resume.skills.map((skill, index) => (
-                                <span key={index} className="bg-slate-200 text-slate-700 text-xs font-medium px-2 py-0.5 rounded">{skill}</span>
+                                <span key={index} className="bg-slate-200 text-slate-700 text-xs font-medium px-2 py-0.5 rounded">{skill.name}</span>
                             ))}
                         </div>
                     </section>

@@ -15,6 +15,7 @@ import { useEffect, useState, useMemo } from "react";
 interface ApplicantDetails extends Student {
     lastAppliedJobTitle: string;
     lastAppliedDate: any;
+    applicationId: string;
 }
 
 export default function CandidatesPage() {
@@ -65,7 +66,8 @@ export default function CandidatesPage() {
                          acc.set(app.studentId, {
                             ...studentInfo,
                             lastAppliedJobTitle: app.jobTitle,
-                            lastAppliedDate: app.appliedDate
+                            lastAppliedDate: app.appliedDate,
+                            applicationId: app.id,
                         });
                     }
                 }
@@ -117,7 +119,7 @@ export default function CandidatesPage() {
                   <TableCell>{applicant.lastAppliedJobTitle}</TableCell>
                   <TableCell className="text-right">
                     <Button asChild variant="ghost" size="sm">
-                       <Link href={`/candidates/${applicant.uid}`}>
+                       <Link href={`/candidates/${applicant.uid}?applicationId=${applicant.applicationId}`}>
                           View Profile <ArrowRight className="ml-2 h-4 w-4" />
                        </Link>
                     </Button>

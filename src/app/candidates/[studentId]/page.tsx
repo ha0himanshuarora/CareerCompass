@@ -8,17 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { db } from "@/lib/firebase";
 import { Student, Resume, Application } from "@/lib/types";
 import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
-import { ArrowLeft, Briefcase, Calendar, GraduationCap, Loader2, Mail, School, FileText } from "lucide-react";
+import { ArrowLeft, Briefcase, Calendar, GraduationCap, Loader2, Mail, School, FileText, MapPin, Phone, Linkedin, Github, Award, Wand2, User as UserIcon } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { ResumePreview } from "@/components/ResumePreview";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Badge } from "@/components/ui/badge";
+import { SkillAnalytics } from "@/components/SkillAnalytics";
+import { ResumePreview } from "@/components/ResumePreview";
 
 export default function CandidateProfilePage() {
     const router = useRouter();
@@ -68,9 +69,13 @@ export default function CandidateProfilePage() {
                     const appDoc = await getDoc(doc(db, "applications", applicationId));
                     if (appDoc.exists()) {
                         const appData = appDoc.data() as Application;
-                        const resumeDoc = await getDoc(doc(db, "resumes", appData.resumeId));
-                        if(resumeDoc.exists()) {
-                            setResumes([{ id: resumeDoc.id, ...resumeDoc.data() } as Resume]);
+                        if (appData.resumeId) {
+                            const resumeDoc = await getDoc(doc(db, "resumes", appData.resumeId));
+                            if(resumeDoc.exists()) {
+                                setResumes([{ id: resumeDoc.id, ...resumeDoc.data() } as Resume]);
+                            }
+                        } else {
+                             setResumes([]);
                         }
                     }
                 } else {
@@ -131,32 +136,32 @@ export default function CandidateProfilePage() {
                 </Button>
                 
                 <div className="grid gap-8">
-                    <Card>
-                        <CardHeader className="flex flex-col md:flex-row items-start gap-6">
-                            <Avatar className="h-24 w-24">
-                                <AvatarImage src={`https://i.pravatar.cc/150?u=${student.uid}`} />
-                                <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                                <CardTitle className="text-3xl font-headline">{student.name}</CardTitle>
-                                <CardDescription className="text-lg text-muted-foreground">{student.email}</CardDescription>
-                                <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                                     <div className="flex items-center gap-2">
-                                        <School className="h-4 w-4 text-muted-foreground" />
-                                        <span>{student.instituteName}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                                        <span>{student.branch}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                                        <span>Graduates in {student.graduationYear}</span>
-                                    </div>
-                                </div>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="text-3xl font-headline">{student.name}</CardTitle>
+                            <CardDescription className="text-lg text-muted-foreground">{student.email}</CardDescription>
+                            <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm pt-4">
+                                {student.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> <span>{student.phone}</span></div>}
+                                {student.address && <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> <span>{student.address}</span></div>}
+                                {student.links?.linkedin && <a href={student.links.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline"><Linkedin className="h-4 w-4 text-muted-foreground" /> <span>LinkedIn</span></a>}
+                                {student.links?.github && <a href={student.links.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline"><Github className="h-4 w-4 text-muted-foreground" /> <span>GitHub</span></a>}
+                                <div className="flex items-center gap-2"><School className="h-4 w-4 text-muted-foreground" /><span>{student.instituteName}</span></div>
+                                <div className="flex items-center gap-2"><GraduationCap className="h-4 w-4 text-muted-foreground" /><span>{student.branch}</span></div>
+                                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /><span>Graduates in {student.graduationYear}</span></div>
                             </div>
                         </CardHeader>
                     </Card>
+
+                    <Card>
+                        <CardHeader><CardTitle className="flex items-center gap-2"><UserIcon className="h-5 w-5" /> Career Objective</CardTitle></CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground italic">
+                                {student.careerObjective || "No career objective provided."}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {student.skills && <SkillAnalytics skills={student.skills} />}
 
                     <Card>
                         <CardHeader>
@@ -174,7 +179,7 @@ export default function CandidateProfilePage() {
                                     <Loader2 className="h-8 w-8 animate-spin" />
                                 </div>
                              ) : resumes.length > 0 ? (
-                                <Accordion type="single" collapsible className="w-full" defaultValue={applicationId ? resumes[0].id : undefined}>
+                                <Accordion type="single" collapsible className="w-full" defaultValue={applicationId && resumes.length > 0 ? resumes[0].id : undefined}>
                                     {resumes.map(resume => (
                                         <AccordionItem key={resume.id} value={resume.id}>
                                             <AccordionTrigger className="text-lg font-semibold">{resume.title}</AccordionTrigger>
@@ -190,7 +195,7 @@ export default function CandidateProfilePage() {
                                 </Accordion>
                              ) : (
                                 <div className="border-2 border-dashed rounded-lg p-12 text-center">
-                                    <p className="text-muted-foreground">This candidate has not created any resumes yet.</p>
+                                    <p className="text-muted-foreground">{applicationId ? "No resume was submitted for this application." : "This candidate has not created any resumes yet."}</p>
                                 </div>
                              )}
                         </CardContent>
@@ -200,4 +205,3 @@ export default function CandidateProfilePage() {
         </AppLayout>
     );
 }
-

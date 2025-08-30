@@ -1,46 +1,90 @@
 
 
+export interface Project {
+    title: string;
+    description: string;
+    skillsUsed: string[];
+    duration?: string;
+    githubLink?: string;
+    liveLink?: string;
+}
+
+export interface AcademicRecord {
+    level: "10th" | "12th" | "Undergraduate" | "Postgraduate";
+    degree: string;
+    institute: string;
+    cgpa: string;
+    year: string;
+}
+
+export interface Certification {
+    name: string;
+    issuer: string;
+    date: string;
+    link?: string;
+}
+
+export interface Skill {
+    name: string;
+    type: 'Technical' | 'Soft';
+    progress?: number;
+}
+
+export interface Experience {
+    company: string;
+    role: string;
+    duration: string;
+    description: string;
+}
+
+export interface Student {
+    uid: string;
+    name: string;
+    email: string;
+    role: 'student';
+    // Personal Info
+    phone?: string;
+    address?: string;
+    links: {
+        linkedin?: string;
+        github?: string;
+        portfolio?: string;
+    };
+    // Academic Info
+    instituteName: string;
+    branch: string;
+    graduationYear: string;
+    rollNumber?: string;
+    academicRecords: AcademicRecord[];
+    // Professional Info
+    careerObjective?: string;
+    skills: Skill[];
+    projects: Project[];
+    experience?: Experience[];
+    certifications: Certification[];
+    // Placement Data
+    jobPreferences?: {
+        domains: string[];
+        locations: string[];
+        packageExpectation: string;
+    };
+    isPlaced?: boolean; 
+}
+
+
 export interface Resume {
     id: string;
     studentId: string;
     title: string;
     template: 'onyx' | 'opal' | 'topaz';
-    personalInfo: {
-        name: string;
-        email: string;
-        mobile: string;
-        enrollment: string;
-        branch: string;
-        passingYear: string;
-        linkedin?: string;
-        github?: string;
-    };
-    careerObjective: string;
-    skills: string[];
-    projects: {
-        title:string;
-        description: string;
-        githubLink?: string;
-        liveLink?: string;
-    }[];
-    academicDetails: {
-        degree: string;
-        institute: string;
-        cgpa: string;
-        year: string;
-    }[];
-    experience?: {
-        company: string;
-        role: string;
-        duration: string;
-        description: string;
-    }[];
-    certifications?: {
-        name: string;
-        issuer: string;
-        date: string;
-        link?: string;
-    }[];
+    // Data is now a snapshot from the student's profile at time of creation
+    personalInfo: Student['links'] & { name: string; email: string; phone?: string; branch: string; };
+    careerObjective?: string;
+    skills: Skill[];
+    projects: Project[];
+    academicDetails: AcademicRecord[];
+    experience?: Experience[];
+    certifications?: Certification[];
     createdAt: any; // Firestore Timestamp
     updatedAt: any; // Firestore Timestamp
 }
@@ -179,17 +223,6 @@ export interface Application {
     resumeId: string;
     status: 'applied' | 'shortlisted' | 'interview' | 'offer' | 'joined' | 'rejected';
     appliedDate: any; // Firestore timestamp
-}
-
-export interface Student {
-    uid: string;
-    name: string;
-    email: string;
-    role: 'student';
-    instituteName: string;
-    branch: string;
-    graduationYear: string;
-    isPlaced?: boolean;
 }
 
 export interface Recruiter {
