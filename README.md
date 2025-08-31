@@ -1,5 +1,10 @@
 # CareerCompass
 
+
+### Link for the Video
+[Open the file on Google Drive](https://drive.google.com/file/d/19GiYJVlXRiJzdd5UVSZpZwXkKNqljWJ0/view?usp=sharing)
+
+
 ## 1. Context
 The **Placement Preparation Tracker** is a unified platform designed to streamline and support the placement journey for final-year undergraduate students. It integrates features such as:
 
@@ -123,3 +128,5 @@ The **Placement Preparation Tracker** is a unified platform designed to streamli
 #### Analytics & Reporting
 - Track applicant statistics, shortlisting percentages, and interview success rates.
 - Download candidate data (resumes, academic records).
+
+
