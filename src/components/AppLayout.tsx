@@ -17,7 +17,8 @@ import {
   Handshake,
   FileQuestion,
   Trophy,
-  ScrollText
+  ScrollText,
+  BellRing,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -28,8 +29,10 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import React from "react";
+import React, { useEffect } from "react";
 import { Compass } from "lucide-react";
+import { subscribeToPush } from "@/lib/pushClient";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 const studentNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -71,6 +74,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
+    }
+  };
+  
+  const handleSubscribe = () => {
+    if (userProfile) {
+      subscribeToPush(userProfile.uid);
     }
   };
   
@@ -140,10 +149,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Input placeholder="Search..." className="pl-9" />
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Notifications</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={handleSubscribe}>
+                            <BellRing className="h-5 w-5" />
+                            <span className="sr-only">Enable Notifications</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enable Notifications</p>
+                    </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </header>
           <main className="flex-1 p-6">{children}</main>

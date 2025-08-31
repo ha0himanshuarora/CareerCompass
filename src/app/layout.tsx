@@ -1,18 +1,24 @@
-import type {Metadata} from 'next';
+
+"use client";
+
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/use-auth';
-
-export const metadata: Metadata = {
-  title: 'CareerCompass',
-  description: 'Navigate Your Career Path with Confidence',
-};
+import { useEffect } from 'react';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then(() => {
+        console.log("✅ Service Worker registered");
+      });
+    }
+  }, []);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

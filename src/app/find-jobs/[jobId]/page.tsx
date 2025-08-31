@@ -17,6 +17,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { sendNotificationToUser } from "@/app/api/send-notification/route";
 
 export default function JobDetailsPage() {
     const { userProfile } = useAuth();
@@ -134,6 +135,13 @@ export default function JobDetailsPage() {
             });
 
             toast({ title: "Success!", description: `You have successfully applied for ${job.jobDetails.title}.` });
+            
+            // Send notification to recruiter
+            await sendNotificationToUser(job.companyId, {
+                title: "New Applicant!",
+                body: `${userProfile.name} has applied for the ${job.jobDetails.title} position.`
+            });
+
         } catch (error) {
             console.error("Error applying for job: ", error);
             toast({ variant: "destructive", title: "Error", description: "Could not submit your application." });

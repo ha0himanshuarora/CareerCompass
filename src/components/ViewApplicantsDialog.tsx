@@ -30,6 +30,7 @@ import { KANBAN_COLUMNS } from "@/lib/constants";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "./ui/command";
 import { useAuth } from "@/hooks/use-auth";
+import { sendNotificationToUser } from "@/app/api/send-notification/route";
 
 
 interface ViewApplicantsDialogProps {
@@ -106,9 +107,15 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
             try {
                 const appRef = doc(db, "applications", applicant.applicationId);
                 await updateDoc(appRef, { status: newStatus });
+                
+                await sendNotificationToUser(applicant.uid, {
+                    title: "Application Status Updated",
+                    body: `Your application for ${job?.jobDetails.title} is now: ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`
+                });
+
                 toast({
                     title: "Status Updated",
-                    description: "The application status has been successfully updated.",
+                    description: "The application status has been updated and the student has been notified.",
                 });
             } catch (error) {
                 console.error("Error updating status:", error);
@@ -145,7 +152,14 @@ export function ViewApplicantsDialog({ job, onOpenChange }: ViewApplicantsDialog
                 status: 'pending',
                 assignedAt: serverTimestamp(),
             });
-            toast({ title: "Test Assigned", description: "The test has been assigned to the student." });
+            
+            const test = recruiterTests.find(t => t.id === testId);
+            await sendNotificationToUser(studentId, {
+                title: "New Test Assigned",
+                body: `You have been assigned the test '${test?.title}' for the role of ${job.jobDetails.title}.`
+            });
+
+            toast({ title: "Test Assigned", description: "The test has been assigned and the student notified." });
         } catch (error) {
              console.error("Error assigning test:", error);
             toast({ variant: "destructive", title: "Error", description: "Failed to assign the test." });

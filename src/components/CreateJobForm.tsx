@@ -15,14 +15,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
-import { collection, addDoc, serverTimestamp, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, Timestamp, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import React, { useEffect } from "react";
-import { Job } from "@/lib/types";
+import { Job, Recruiter } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
+import { sendNotificationToUser } from "@/app/api/send-notification/route";
 
 const formSchema = z.object({
   jobDetails: z.object({
@@ -42,9 +43,9 @@ const formSchema = z.object({
     joiningDate: z.date().optional(),
   }),
   eligibilityCriteria: z.object({
-    cgpa: z.coerce.number().min(0).max(10),
+    cgpa: z.coerce.number().min(0, "CGPA cannot be negative.").max(10),
     backlogsAllowed: z.boolean(),
-    allowedBacklogCount: z.coerce.number().optional(),
+    allowedBacklogCount: z.coerce.number().min(0, "Backlog count cannot be negative.").optional(),
     departmentsAllowed: z.string().min(1, "At least one department is required"),
     yearOfPassing: z.coerce.number().min(1990),
     genderPreference: z.enum(["Any", "Male", "Female"]).optional(),
@@ -129,8 +130,14 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
 
     setIsLoading(true);
     try {
+        const jobDetails = { ...values.jobDetails };
+        if (!jobDetails.joiningDate) {
+          delete (jobDetails as any).joiningDate;
+        }
+
         const jobDataToSave = {
             ...values,
+            jobDetails,
             eligibilityCriteria: {
                 ...values.eligibilityCriteria,
                 departmentsAllowed: values.eligibilityCriteria.departmentsAllowed.split(',').map(d => d.trim()).filter(Boolean),
@@ -142,9 +149,16 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
             },
         };
 
+
       if(initialData) {
         // Update existing job
         const jobRef = doc(db, "jobs", initialData.id);
+        
+        // Firestore doesn't allow 'undefined' values.
+        if (!jobDataToSave.jobDetails.joiningDate) {
+            delete (jobDataToSave.jobDetails as any).joiningDate;
+        }
+
         await updateDoc(jobRef, {
             ...jobDataToSave,
             // Keep existing metadata and other top-level fields
@@ -163,7 +177,6 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
             ...jobDataToSave,
             companyId: userProfile.uid,
             tpoApproved: false, // Default value
-            // Default empty structures for other parts of the schema
             applicationProcess: {},
             offerDetails: {},
             tpoOverrides: {},
@@ -171,12 +184,16 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
                 postedBy: userProfile.uid,
                 postedOn: serverTimestamp(),
                 lastUpdated: serverTimestamp(),
-                status: 'Open', // Default status
+                status: 'Open',
                 applicantCount: 0,
                 shortlistedCount: 0,
                 hiredCount: 0,
             }
         });
+        
+        // This is a simplified notification. A real app would query for eligible students.
+        // For now, we don't send notifications on creation to avoid spamming.
+        // Notifications are better sent by TPOs or for specific actions.
         toast({ title: "Success!", description: "Your job posting has been created." });
       }
 
@@ -227,6 +244,7 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
                     <FormField control={form.control} name="jobDetails.startDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="jobDetails.applicationDeadline" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Application Deadline</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                  </div>
+                 <FormField control={form.control} name="jobDetails.joiningDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Joining Date (Optional)</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
             </CardContent>
         </Card>
 
@@ -234,12 +252,12 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
             <CardHeader><CardTitle>Eligibility Criteria</CardTitle></CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="eligibilityCriteria.cgpa" render={({ field }) => (<FormItem><FormLabel>Min CGPA</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="eligibilityCriteria.yearOfPassing" render={({ field }) => (<FormItem><FormLabel>Year of Passing</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="eligibilityCriteria.cgpa" render={({ field }) => (<FormItem><FormLabel>Min CGPA</FormLabel><FormControl><Input type="number" step="0.1" min="0" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="eligibilityCriteria.yearOfPassing" render={({ field }) => (<FormItem><FormLabel>Year of Passing</FormLabel><FormControl><Input type="number" min="1990" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
                 <FormField control={form.control} name="eligibilityCriteria.backlogsAllowed" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><FormLabel>Allow Backlogs?</FormLabel></div></FormItem>)} />
                 {form.watch("eligibilityCriteria.backlogsAllowed") && (
-                    <FormField control={form.control} name="eligibilityCriteria.allowedBacklogCount" render={({ field }) => (<FormItem><FormLabel>Allowed Backlog Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="eligibilityCriteria.allowedBacklogCount" render={({ field }) => (<FormItem><FormLabel>Allowed Backlog Count</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 )}
                  <FormField control={form.control} name="eligibilityCriteria.departmentsAllowed" render={({ field }) => (<FormItem><FormLabel>Departments Allowed</FormLabel><FormControl><Input placeholder="e.g. Computer Science, Information Technology" {...field} /></FormControl><FormDescription>Comma-separated list of departments.</FormDescription><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="eligibilityCriteria.skillRequirements" render={({ field }) => (<FormItem><FormLabel>Skill Requirements</FormLabel><FormControl><Textarea placeholder="e.g. Python, Java, SQL" {...field} /></FormControl><FormDescription>Comma-separated list of required skills.</FormDescription><FormMessage /></FormItem>)} />

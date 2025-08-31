@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
+import { sendNotificationToUser } from "@/app/api/send-notification/route";
 
 interface AssignTestDialogProps {
   isOpen: boolean;
@@ -81,6 +82,15 @@ export function AssignTestDialog({ isOpen, onOpenChange, test, jobs }: AssignTes
             });
 
             await Promise.all(assignmentPromises);
+            
+            const selectedJob = jobs.find(j => j.id === selectedJobId);
+            const notificationPromises = studentsToAssign.map(app => 
+                sendNotificationToUser(app.studentId, {
+                    title: `New Test Assigned: ${test.title}`,
+                    body: `A new test is available for your application to ${selectedJob?.jobDetails.title}.`
+                })
+            );
+            await Promise.all(notificationPromises);
 
             toast({ title: "Success!", description: `Test '${test.title}' assigned to ${studentsToAssign.length} new applicant(s).` });
             onOpenChange(false);

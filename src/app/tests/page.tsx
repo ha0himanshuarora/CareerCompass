@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AssignTestDialog } from "@/components/AssignTestDialog";
+import { sendNotificationToUser } from "../api/send-notification/route";
 
 
 export default function ManageTestsPage() {
@@ -90,12 +91,12 @@ export default function ManageTestsPage() {
         }
     }
     
-    const handleAssignToStudents = async (testId: string) => {
+    const handleAssignToStudents = async (test: Test) => {
         if (userProfile?.role !== 'tpo' || !userProfile.instituteName) {
             toast({ variant: "destructive", title: "Permission Denied" });
             return;
         }
-        setAssigningTestId(testId);
+        setAssigningTestId(test.id);
         try {
             const studentsQuery = query(
                 collection(db, "users"),
@@ -105,7 +106,7 @@ export default function ManageTestsPage() {
             const studentSnapshot = await getDocs(studentsQuery);
             const students = studentSnapshot.docs.map(doc => doc.data() as Student);
             
-            const assignmentsQuery = query(collection(db, "studentTests"), where("testId", "==", testId));
+            const assignmentsQuery = query(collection(db, "studentTests"), where("testId", "==", test.id));
             const assignmentSnapshot = await getDocs(assignmentsQuery);
             const assignedStudentIds = new Set(assignmentSnapshot.docs.map(doc => doc.data().studentId));
             
@@ -120,7 +121,7 @@ export default function ManageTestsPage() {
             const assignmentPromises = studentsToAssign.map(student => {
                 return addDoc(collection(db, "studentTests"), {
                     studentId: student.uid,
-                    testId: testId,
+                    testId: test.id,
                     assignedBy: userProfile.uid,
                     status: 'pending',
                     assignedAt: serverTimestamp(),
@@ -128,6 +129,15 @@ export default function ManageTestsPage() {
             });
 
             await Promise.all(assignmentPromises);
+
+            // Send notifications
+            const notificationPromises = studentsToAssign.map(student => 
+                sendNotificationToUser(student.uid, {
+                    title: `New Mock Test: ${test.title}`,
+                    body: `A new mock test from ${userProfile.instituteName} is available.`
+                })
+            );
+            await Promise.all(notificationPromises);
             
             toast({ title: "Success!", description: `Test assigned to ${studentsToAssign.length} new student(s).` });
 
@@ -199,7 +209,7 @@ export default function ManageTestsPage() {
                                         <Button variant="outline" size="sm" className="w-full" onClick={() => handleOpenCreateDialog(test)}>
                                             <Edit className="mr-2 h-4 w-4" /> Edit
                                         </Button>
-                                        <Button size="sm" className="w-full" onClick={() => handleAssignToStudents(test.id)} disabled={assigningTestId === test.id}>
+                                        <Button size="sm" className="w-full" onClick={() => handleAssignToStudents(test)} disabled={assigningTestId === test.id}>
                                            {assigningTestId === test.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                             Assign
                                         </Button>

@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
 import { OfferLetter, Application, Student } from "@/lib/types";
-import { doc, getDoc, updateDoc, writeBatch, collection } from "firebase/firestore";
+import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
 import { ArrowLeft, Download, Loader2, MessageSquare, Check, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OfferLetterPreview } from "@/components/OfferLetterPreview";
 import { useAuth } from "@/hooks/use-auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { sendNotificationToUser } from "@/app/api/send-notification/route";
 
 export default function OfferLetterViewerPage() {
     const router = useRouter();
@@ -77,14 +78,27 @@ export default function OfferLetterViewerPage() {
                 const acceptedAppRef = doc(db, "applications", application.id);
                 batch.update(acceptedAppRef, { status: "joined" });
                 
-                // Reject all other applications for the student (a real app might need more nuanced logic)
-                const appsQuery = collection(db, 'applications');
-                // You would typically query where studentId is userProfile.uid
-                // For simplicity, we just update the current one and assume others would be found
+                // Reject all other applications for the student
+                const otherAppsQuery = query(
+                    collection(db, "applications"),
+                    where("studentId", "==", userProfile.uid),
+                    where("status", "!=", "rejected")
+                );
+                const otherAppsSnapshot = await getDocs(otherAppsQuery);
+                otherAppsSnapshot.forEach(appDoc => {
+                    if (appDoc.id !== application.id) {
+                         batch.update(appDoc.ref, { status: "rejected" });
+                    }
+                });
                 
                 toast({
                   title: "Congratulations!",
                   description: `You have accepted the offer from ${offerLetter.content.companyName}.`,
+                });
+                
+                await sendNotificationToUser(offerLetter.recruiterId, {
+                    title: "Offer Accepted!",
+                    body: `${userProfile.name} has accepted your offer for the ${offerLetter.content.jobTitle} position.`
                 });
 
             } else { // 'reject'
