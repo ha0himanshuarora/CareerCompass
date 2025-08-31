@@ -176,7 +176,10 @@ export default function SignupPage() {
             <div className="grid gap-2"><Label htmlFor="confirmPassword">Confirm Password</Label><Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="companyName">Company Name</Label><Input id="companyName" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="hrContact">HR Contact Email</Label><Input id="hrContact" type="email" required value={hrContact} onChange={(e) => setHrContact(e.target.value)} /></div>
-            <div className="grid gap-2"><Label htmlFor="contact">Contact Number</Label><Input id="contact" type="tel" required value={contact} onChange={(e) => setContact(e.target.value)} /></div>
+            <div className="grid gap-2">
+                <Label htmlFor="contact">Contact Number</Label>
+                <Input id="contact" type="tel" required minLength={10} pattern="[0-9]*" value={contact} onChange={(e) => setContact(e.target.value)} />
+            </div>
           </div>
         )
       case 'tpo':
@@ -187,7 +190,10 @@ export default function SignupPage() {
             <div className="grid gap-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="confirmPassword">Confirm Password</Label><Input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="instituteName">Institute Name</Label><Input id="instituteName" required value={instituteName} onChange={(e) => setInstituteName(e.target.value)} /></div>
-            <div className="grid gap-2"><Label htmlFor="contactNumber">Contact Number</Label><Input id="contactNumber" type="tel" required value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} /></div>
+            <div className="grid gap-2">
+                <Label htmlFor="contactNumber">Contact Number</Label>
+                <Input id="contactNumber" type="tel" required minLength={10} pattern="[0-9]*" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+            </div>
           </div>
         )
       default:

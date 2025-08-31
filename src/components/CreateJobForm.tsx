@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -58,6 +59,9 @@ const formSchema = z.object({
       ppoCtc: z.string().optional(),
       perks: z.string().optional(),
   }),
+}).refine(data => data.jobDetails.applicationDeadline >= data.jobDetails.startDate, {
+    message: "Application deadline cannot be before the start date.",
+    path: ["jobDetails", "applicationDeadline"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -155,11 +159,7 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
         const jobRef = doc(db, "jobs", initialData.id);
         
         // Firestore doesn't allow 'undefined' values.
-        if (!jobDataToSave.jobDetails.joiningDate) {
-            delete (jobDataToSave.jobDetails as any).joiningDate;
-        }
-
-        await updateDoc(jobRef, {
+        const finalJobData: any = {
             ...jobDataToSave,
             // Keep existing metadata and other top-level fields
             companyId: initialData.companyId,
@@ -168,7 +168,14 @@ export function CreateJobForm({ onFormSubmit, initialData }: CreateJobFormProps)
                 ...initialData.metadata,
                 lastUpdated: serverTimestamp(),
             }
-        });
+        };
+
+        if (!finalJobData.jobDetails.joiningDate) {
+            delete finalJobData.jobDetails.joiningDate;
+        }
+
+        await updateDoc(jobRef, finalJobData);
+
         toast({ title: "Success!", description: "The job posting has been updated." });
 
       } else {

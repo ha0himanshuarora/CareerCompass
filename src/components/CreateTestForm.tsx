@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -31,8 +32,8 @@ const questionSchema = z.object({
 
 const testFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long."),
-  duration: z.coerce.number().min(1, "Duration must be at least 1 minute."),
-  passingScore: z.coerce.number().optional(),
+  duration: z.coerce.number().min(5, "Duration must be at least 5 minutes."),
+  passingScore: z.coerce.number().min(1, "Passing score must be at least 1.").optional(),
   questions: z.array(questionSchema).min(1, "A test must have at least one question."),
 });
 
@@ -72,7 +73,7 @@ export function CreateTestForm({ onFormSubmit, initialData }: CreateTestFormProp
         } : {
             title: "",
             duration: 30,
-            passingScore: 0,
+            passingScore: 1,
             questions: [{ questionText: "", options: ["", "", "", ""], correctOption: 0 }],
         }
     });
@@ -155,11 +156,11 @@ export function CreateTestForm({ onFormSubmit, initialData }: CreateTestFormProp
                     <FormItem><FormLabel>Test Title</FormLabel><FormControl><Input {...field} placeholder="e.g., Aptitude Test" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="duration" render={({ field }) => (
-                    <FormItem><FormLabel>Duration (in minutes)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Duration (in minutes)</FormLabel><FormControl><Input type="number" min="5" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 {userProfile?.role === 'recruiter' && (
                      <FormField control={form.control} name="passingScore" render={({ field }) => (
-                        <FormItem><FormLabel>Passing Score</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Passing Score</FormLabel><FormControl><Input type="number" min="1" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 )}
                 
