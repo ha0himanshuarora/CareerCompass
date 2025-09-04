@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { collection, doc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { Compass, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -92,6 +92,9 @@ export default function SignupPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      await sendEmailVerification(user);
+
       await updateProfile(user, { displayName: name });
       
       const userData: any = {
@@ -117,7 +120,12 @@ export default function SignupPage() {
 
       await setDoc(doc(db, "users", user.uid), userData);
 
-      router.push('/dashboard');
+      toast({
+        title: "Account Created!",
+        description: "A verification link has been sent to your email. Please verify before logging in.",
+      });
+
+      router.push('/login');
     } catch (error: any) {
        toast({
         variant: "destructive",

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -10,12 +11,19 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+
+    if (!user) {
       router.push("/login");
+      return;
+    }
+
+    if (!user.emailVerified) {
+      router.push("/login?verified=false");
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !user || !user.emailVerified) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />

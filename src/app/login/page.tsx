@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -6,33 +7,56 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { Compass, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  
+  useEffect(() => {
+    if (searchParams.get('verified') === 'false') {
+        setShowVerificationMessage(true);
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setShowVerificationMessage(false);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // We need to check the emailVerified status from the fresh credential
+      if (!userCredential.user.emailVerified) {
+        toast({
+            variant: "destructive",
+            title: "Verification Required",
+            description: "Please verify your email address before logging in. A verification link was sent to your inbox.",
+        });
+        // Sign out the user to prevent them from being in a logged-in but unverified state
+        await signOut(auth);
+        setIsLoading(false);
+        return;
+      }
+      // If verified, the AuthProvider will handle the redirect
       router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message,
+        description: "Invalid email or password.",
       });
-    } finally {
-      setIsLoading(false);
+       setIsLoading(false);
     }
   };
 
@@ -50,6 +74,15 @@ export default function LoginPage() {
             <CardDescription>Welcome back! Please enter your details.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
+             {showVerificationMessage && (
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Verify Your Email</AlertTitle>
+                    <AlertDescription>
+                        A verification link has been sent to your email. Please verify before logging in.
+                    </AlertDescription>
+                </Alert>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" placeholder="student@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
